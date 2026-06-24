@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react'
 import { requestDeviceCode, pollForToken, type DeviceCodeResponse } from '../auth/deviceFlow'
 import { fetchUser } from '../api/github'
-import { useAccountStore } from '../store/accounts'
+import { useAccountStore, type Account } from '../store/accounts'
 
 const CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID
 
-export default function AuthScreen() {
+interface Props {
+  reconnectAccount?: Account
+}
+
+export default function AuthScreen({ reconnectAccount }: Props) {
   const [step, setStep] = useState<'idle' | 'pending' | 'polling' | 'error'>('idle')
   const [deviceData, setDeviceData] = useState<DeviceCodeResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -21,15 +25,13 @@ export default function AuthScreen() {
       setStep('polling')
 
       abortRef.current = new AbortController()
-      const token = await pollForToken(CLIENT_ID, data.device_code, data.interval, abortRef.current.signal)
-      const user = await fetchUser(token.access_token)
+      const tokenRes = await pollForToken(CLIENT_ID, data.device_code, data.interval, abortRef.current.signal)
+      const user = await fetchUser(tokenRes.access_token)
 
-      addAccount({
-        login: user.login,
-        name: user.name ?? null,
-        avatarUrl: user.avatar_url,
-        token: token.access_token,
-      })
+      addAccount(
+        { login: user.login, name: user.name ?? null, avatarUrl: user.avatar_url },
+        tokenRes.access_token,
+      )
     } catch (err) {
       if (err instanceof Error && err.message === 'Aborted') return
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -46,11 +48,18 @@ export default function AuthScreen() {
   return (
     <div style={s.container}>
       <h1 style={s.title}>GitHub Voice Commander</h1>
-      <p style={s.subtitle}>Connect your GitHub account to get started</p>
+
+      {reconnectAccount ? (
+        <p style={s.subtitle}>
+          Session expired — reconnect as <strong>@{reconnectAccount.login}</strong>
+        </p>
+      ) : (
+        <p style={s.subtitle}>Connect your GitHub account to get started</p>
+      )}
 
       {step === 'idle' && (
         <button style={s.btn} onClick={startFlow}>
-          Connect GitHub Account
+          {reconnectAccount ? 'Reconnect GitHub Account' : 'Connect GitHub Account'}
         </button>
       )}
 

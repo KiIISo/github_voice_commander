@@ -11,17 +11,22 @@ interface Repo {
   language: string | null
 }
 
-export default function Dashboard({ account }: { account: Account }) {
+interface Props {
+  account: Account
+  token: string
+}
+
+export default function Dashboard({ account, token }: Props) {
   const [repos, setRepos] = useState<Repo[]>([])
   const [loading, setLoading] = useState(true)
   const { accounts, activeLogin, setActive, removeAccount } = useAccountStore()
 
   useEffect(() => {
     setLoading(true)
-    fetchRepos(account.token)
+    fetchRepos(token)
       .then((data) => setRepos(data as Repo[]))
       .finally(() => setLoading(false))
-  }, [account.token])
+  }, [token])
 
   return (
     <div style={s.container}>
