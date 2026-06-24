@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { requestDeviceCode, pollForToken, type DeviceCodeResponse } from '../auth/deviceFlow'
 import { fetchUser } from '../api/github'
 import { useAccountStore, type Account } from '../store/accounts'
+import { log } from '../logger'
 
 const CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID
 
@@ -19,6 +20,7 @@ export default function AuthScreen({ reconnectAccount }: Props) {
   async function startFlow() {
     setStep('pending')
     setError(null)
+    log.info('Auth flow started', { reconnect: !!reconnectAccount })
     try {
       const data = await requestDeviceCode(CLIENT_ID)
       setDeviceData(data)
@@ -32,9 +34,15 @@ export default function AuthScreen({ reconnectAccount }: Props) {
         { login: user.login, name: user.name ?? null, avatarUrl: user.avatar_url },
         tokenRes.access_token,
       )
+      log.info('Account connected', { login: user.login })
     } catch (err) {
-      if (err instanceof Error && err.message === 'Aborted') return
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      if (err instanceof Error && err.message === 'Aborted') {
+        log.info('Auth flow cancelled by user')
+        return
+      }
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      log.error('Auth flow failed', { error: msg })
+      setError(msg)
       setStep('error')
     }
   }
@@ -88,22 +96,15 @@ export default function AuthScreen({ reconnectAccount }: Props) {
 
 const s: Record<string, React.CSSProperties> = {
   container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '1rem',
-    fontFamily: 'system-ui, sans-serif',
-    background: '#0d1117',
-    color: '#e6edf3',
+    minHeight: '100vh', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', padding: '1rem',
+    fontFamily: 'system-ui, sans-serif', background: '#0d1117', color: '#e6edf3',
   },
   title: { fontSize: '1.8rem', fontWeight: 700, margin: '0 0 0.5rem' },
   subtitle: { color: '#8b949e', margin: '0 0 2rem', textAlign: 'center' },
   btn: {
     background: '#238636', color: '#fff', border: 'none',
-    padding: '0.75rem 1.5rem', borderRadius: '6px',
-    fontSize: '1rem', cursor: 'pointer', fontWeight: 600,
+    padding: '0.75rem 1.5rem', borderRadius: '6px', fontSize: '1rem', cursor: 'pointer', fontWeight: 600,
   },
   cancelBtn: {
     background: 'transparent', color: '#8b949e', border: '1px solid #30363d',
