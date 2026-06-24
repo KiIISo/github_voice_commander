@@ -1,7 +1,8 @@
 import { log } from '../logger'
 
-const DEVICE_CODE_URL = 'https://github.com/login/device/code'
-const TOKEN_URL = 'https://github.com/login/oauth/access_token'
+// Routed through a local proxy to avoid CORS restrictions on GitHub's OAuth endpoints
+const DEVICE_CODE_URL = '/api/github/login/device/code'
+const TOKEN_URL = '/api/github/login/oauth/access_token'
 
 export interface DeviceCodeResponse {
   device_code: string

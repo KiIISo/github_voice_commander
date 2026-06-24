@@ -2,7 +2,17 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const githubProxy = {
+  '/api/github': {
+    target: 'https://github.com',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api\/github/, ''),
+  },
+}
+
 export default defineConfig({
+  server:  { proxy: githubProxy },
+  preview: { proxy: githubProxy },
   plugins: [
     react(),
     VitePWA({
