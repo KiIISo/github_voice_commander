@@ -24,6 +24,84 @@ export async function fetchRepos(token: string) {
   return data
 }
 
+export async function fetchRepoLabels(token: string, owner: string, repo: string) {
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.listLabelsForRepo({ owner, repo, per_page: 100 })
+  return data
+}
+
+export async function setIssueLabels(token: string, owner: string, repo: string, issueNumber: number, labels: string[]) {
+  log.info('Setting labels', { issueNumber, labels })
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.setLabels({ owner, repo, issue_number: issueNumber, labels })
+  return data
+}
+
+export async function fetchMilestones(token: string, owner: string, repo: string) {
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.listMilestones({ owner, repo, state: 'open' })
+  return data
+}
+
+export async function setIssueMilestone(token: string, owner: string, repo: string, issueNumber: number, milestone: number | null) {
+  log.info('Setting milestone', { issueNumber, milestone })
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.update({
+    owner, repo, issue_number: issueNumber,
+    milestone: milestone as number,
+  })
+  return data
+}
+
+export async function updateIssueState(token: string, owner: string, repo: string, issueNumber: number, state: 'open' | 'closed') {
+  log.info('Updating issue state', { issueNumber, state })
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.update({ owner, repo, issue_number: issueNumber, state })
+  return data
+}
+
+export async function fetchIssueByNumber(token: string, owner: string, repo: string, issueNumber: number) {
+  const octokit = createOctokit(token)
+  const { data } = await octokit.rest.issues.get({ owner, repo, issue_number: issueNumber })
+  return data
+}
+
+export async function fetchSubIssues(token: string, owner: string, repo: string, issueNumber: number) {
+  const octokit = createOctokit(token)
+  const result = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', {
+    owner, repo, issue_number: issueNumber,
+    headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+  })
+  return result.data as SubIssueItem[]
+}
+
+export async function addSubIssue(token: string, owner: string, repo: string, issueNumber: number, subIssueId: number) {
+  log.info('Adding sub-issue', { issueNumber, subIssueId })
+  const octokit = createOctokit(token)
+  await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', {
+    owner, repo, issue_number: issueNumber,
+    sub_issue_id: subIssueId,
+    headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+  })
+}
+
+export async function removeSubIssue(token: string, owner: string, repo: string, issueNumber: number, subIssueId: number) {
+  log.info('Removing sub-issue', { issueNumber, subIssueId })
+  const octokit = createOctokit(token)
+  await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/sub_issues/{sub_issue_id}', {
+    owner, repo, issue_number: issueNumber, sub_issue_id: subIssueId,
+    headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+  })
+}
+
+export interface SubIssueItem {
+  id: number
+  number: number
+  title: string
+  state: string
+  html_url: string
+}
+
 export async function createIssue(token: string, owner: string, repo: string, title: string, body: string) {
   log.info('Creating issue', { owner, repo, title })
   const octokit = createOctokit(token)

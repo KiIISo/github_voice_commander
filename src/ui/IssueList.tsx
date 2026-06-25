@@ -11,8 +11,10 @@ export interface Issue {
   body: string | null
   html_url: string
   created_at: string
+  state: 'open' | 'closed'
   user: { login: string; avatar_url: string } | null
   labels: Array<{ name: string; color: string }>
+  milestone: { number: number; title: string } | null
   comments: number
 }
 
