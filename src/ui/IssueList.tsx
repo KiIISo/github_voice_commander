@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { fetchIssues } from '../api/github'
 import { log } from '../logger'
+import IssueDetail from './IssueDetail'
+import NewIssueForm from './NewIssueForm'
 
-interface Issue {
+export interface Issue {
   id: number
   number: number
   title: string
+  body: string | null
   html_url: string
   created_at: string
-  user: { login: string } | null
+  user: { login: string; avatar_url: string } | null
   labels: Array<{ name: string; color: string }>
   comments: number
 }
@@ -51,15 +54,45 @@ export default function IssueList({
 }) {
   const [issues, setIssues] = useState<Issue[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [showNewIssue, setShowNewIssue] = useState(false)
+
   const [owner, repoName] = repo.full_name.split('/')
 
-  useEffect(() => {
+  function loadIssues() {
     setLoading(true)
     fetchIssues(token, owner, repoName)
       .then((data) => setIssues(data as Issue[]))
       .catch((err: unknown) => log.error('Failed to load issues', { error: String(err) }))
       .finally(() => setLoading(false))
-  }, [token, owner, repoName])
+  }
+
+  useEffect(() => { loadIssues() }, [token, owner, repoName]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (selectedIssue) {
+    return (
+      <IssueDetail
+        issue={selectedIssue}
+        repo={repo}
+        token={token}
+        onBack={() => setSelectedIssue(null)}
+      />
+    )
+  }
+
+  if (showNewIssue) {
+    return (
+      <NewIssueForm
+        repo={repo}
+        token={token}
+        onCancel={() => setShowNewIssue(false)}
+        onCreated={() => {
+          setShowNewIssue(false)
+          loadIssues()
+        }}
+      />
+    )
+  }
 
   return (
     <div style={s.container}>
@@ -71,6 +104,7 @@ export default function IssueList({
             <LinkIcon />
           </a>
         </div>
+        <button style={s.newBtn} onClick={() => setShowNewIssue(true)}>+ New Issue</button>
       </header>
 
       <main style={s.main}>
@@ -83,7 +117,11 @@ export default function IssueList({
         ) : (
           <div style={s.list}>
             {issues.map((issue) => (
-              <div key={issue.id} style={s.card}>
+              <div
+                key={issue.id}
+                style={s.card}
+                onClick={() => setSelectedIssue(issue)}
+              >
                 <div style={s.cardTop}>
                   <span style={s.num}>#{issue.number}</span>
                   <span style={s.title}>{issue.title}</span>
@@ -140,16 +178,20 @@ export default function IssueList({
 const s: Record<string, React.CSSProperties> = {
   container: { minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'system-ui, sans-serif' },
   header: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
-    gap: '0.5rem', padding: '1rem', borderBottom: '1px solid #21262d', background: '#161b22',
+    display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+    padding: '1rem', borderBottom: '1px solid #21262d', background: '#161b22',
   },
   backBtn: {
     background: 'transparent', color: '#58a6ff', border: 'none',
-    cursor: 'pointer', fontSize: '0.9rem', padding: 0,
+    cursor: 'pointer', fontSize: '0.9rem', padding: 0, marginRight: 'auto',
   },
-  repoTitle: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+  repoTitle: { display: 'flex', alignItems: 'center', gap: '0.4rem' },
   repoName: { fontWeight: 700, fontSize: '1rem' },
   headerLink: { color: '#8b949e', display: 'flex', alignItems: 'center' },
+  newBtn: {
+    background: '#238636', color: '#fff', border: 'none', borderRadius: '6px',
+    padding: '0.4rem 0.75rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+  },
   main: { padding: '1rem' },
   sectionTitle: {
     fontSize: '0.75rem', fontWeight: 600, margin: '0 0 1rem',
@@ -159,7 +201,7 @@ const s: Record<string, React.CSSProperties> = {
   list: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   card: {
     background: '#161b22', border: '1px solid #21262d',
-    borderRadius: '8px', padding: '0.85rem 1rem',
+    borderRadius: '8px', padding: '0.85rem 1rem', cursor: 'pointer',
   },
   cardTop: { display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.4rem' },
   num: { color: '#8b949e', fontSize: '0.8rem', flexShrink: 0, paddingTop: '2px' },
