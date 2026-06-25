@@ -27,7 +27,7 @@ export default function Dashboard({ account }: { account: Account }) {
         log.error('Failed to load repositories', { error: String(err) })
       })
       .finally(() => setLoading(false))
-  }, [token])
+  }, [account.token])
 
   return (
     <div style={s.container}>
