@@ -30,10 +30,12 @@ export default function AuthScreen({ reconnectAccount }: Props) {
       const tokenRes = await pollForToken(CLIENT_ID, data.device_code, data.interval, abortRef.current.signal)
       const user = await fetchUser(tokenRes.access_token)
 
-      addAccount(
-        { login: user.login, name: user.name ?? null, avatarUrl: user.avatar_url },
-        tokenRes.access_token,
-      )
+      addAccount({
+        login: user.login,
+        name: user.name ?? null,
+        avatarUrl: user.avatar_url,
+        token: tokenRes.access_token,
+      })
       log.info('Account connected', { login: user.login })
     } catch (err) {
       if (err instanceof Error && err.message === 'Aborted') {

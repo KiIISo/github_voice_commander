@@ -29,7 +29,18 @@ async function readBody(req) {
   })
 }
 
+// Explicit allowlist — prevents this proxy from being used as an open SSRF relay
+const ALLOWED_PROXY_PATHS = new Set([
+  '/login/device/code',
+  '/login/oauth/access_token',
+])
+
 async function proxyGitHub(req, res, targetPath) {
+  if (!ALLOWED_PROXY_PATHS.has(targetPath)) {
+    res.writeHead(403, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Path not allowed' }))
+    return
+  }
   try {
     const body = await readBody(req)
     const upstream = await fetch(`https://github.com${targetPath}`, {
@@ -65,6 +76,7 @@ createServer(async (req, res) => {
     res.writeHead(404)
     res.end('Not found')
   }
-}).listen(PORT, () => {
+// Bind to localhost only — not exposed on LAN/external interfaces
+}).listen(PORT, '127.0.0.1', () => {
   console.log(`GitHub Voice Commander → http://localhost:${PORT}`)
 })

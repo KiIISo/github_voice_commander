@@ -13,12 +13,7 @@ interface Repo {
   language: string | null
 }
 
-interface Props {
-  account: Account
-  token: string
-}
-
-export default function Dashboard({ account, token }: Props) {
+export default function Dashboard({ account }: { account: Account }) {
   const [repos, setRepos] = useState<Repo[]>([])
   const [loading, setLoading] = useState(true)
   const [showLogs, setShowLogs] = useState(false)
@@ -26,7 +21,7 @@ export default function Dashboard({ account, token }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    fetchRepos(token)
+    fetchRepos(account.token)
       .then((data) => setRepos(data as Repo[]))
       .catch((err: unknown) => {
         log.error('Failed to load repositories', { error: String(err) })
